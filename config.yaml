@@ -1,0 +1,43 @@
+# Настройки бренда, который защищаем. Чтобы мониторить другой банк — поменяйте этот файл.
+brand:
+  name: "Банк ЦентрКредит"
+  # Официальные домены: всё, что на них ведёт (редирект), считается защитной регистрацией банка
+  official_domains: [bcc.kz, centercredit.kz]
+  # Официальные Telegram-аккаунты (без @, регистр не важен)
+  official_telegram: [BankCenterCredit_bot]
+  # Официальные хэндлы в других соцсетях: их «тёзка» в Telegram подозрителен
+  official_social: [centercreditkz]
+  # Домены, от которых генерируются опечатки (dnstwist)
+  seed_domains: [bcc.kz, centercredit.kz, bankcentercredit.kz]
+  # Корни имён для связок "корень + суффикс + зона"
+  name_roots: [bcc, bcckz, bcc-kz, centercredit, center-credit, centrcredit, bankcentercredit,
+               bcc-bank, bccbank, bcconline, bcc-online, mybcc, mybcc-kz, bccbusiness, bcc-business]
+  name_suffixes: ["", -online, -login, -support, -kz, -pay, -bonus, -gift, -cashback, -verify,
+                  -secure, -auth, "24", -24, -app, -help]
+  tlds: [kz, com, net, org, online, site, info, pro, top, xyz, app, shop, store, click, link, live,
+         me, cc, icu, sbs, life, vip, fun, website, space, tech, su, ru]
+  # Регулярное выражение: признаки бренда в имени домена / аккаунта / в тексте страницы
+  brand_regex: "centercredit|centrcredit|center-credit|центр\\s*кредит|bcc"
+  page_brand_regex: "centercredit|центркредит|центр кредит|bcc\\.kz"
+  # Корни для поиска Telegram-двойников
+  telegram_roots: [bcc, bcckz, bcc_kz, bank_bcc, bccbank, bcc_bank, centercredit, center_credit,
+                   bankcentercredit, bank_centercredit, centercredit_kz, bcc_bank_kz]
+  telegram_suffixes: ["", _official, _support, support, _help, help, _bot, bot, _support_bot, supportbot,
+                      _online, online, _business, business, _bonus, _kz, kz, _sb, _security, _service,
+                      _info, _news, _chat, "_24", "24", _pay, _app, _cashback]
+  # Паттерны для поиска в логах SSL-сертификатов (crt.sh)
+  cert_patterns: ["%centercredit%", "%centrcredit%", "%bcc-kz%", "%bcckz%", "%bccbank%", "%bcc-bank%",
+                  "%bcc-online%", "%bcconline%", "%mybcc%", "%bcc-pay%"]
+
+scoring:
+  # Порог дней: регистрация моложе этого считается «свежей»
+  fresh_days: 365
+  high: 5      # балл >= high  -> высокий риск
+  medium: 3    # балл >= medium -> средний риск
+
+network:
+  dns_workers: 60
+  http_workers: 16
+  dns_timeout: 4
+  http_timeout: 10
+  nameservers: ["8.8.8.8", "1.1.1.1"]
