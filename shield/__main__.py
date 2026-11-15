@@ -3,6 +3,8 @@
   run       — прогон мониторинга (по умолчанию всё: домены, сертификаты, Telegram)
   list      — угрозы из базы (по умолчанию средний и высокий риск)
   events    — что изменилось за последние N дней
+  analyze   — скриншот + LLM-вердикт для подозрительных доменов
+  report    — HTML-отчёт со скриншотами
   rescore   — пересчитать риск без сети
   status    — поменять статус объекта (reviewed / reported / removed / false_positive)
   export    — выгрузить базу в CSV
@@ -29,6 +31,11 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--only", choices=["domains", "certs", "telegram"], action="append",
                    help="запустить только часть сборщиков (можно несколько раз)")
     r.add_argument("--limit", type=int, help="проверить только первые N доменов-кандидатов (для быстрого теста)")
+    r.add_argument("--no-analyze", action="store_true", help="без скриншотов и LLM")
+
+    an = sub.add_parser("analyze", help="скриншот + LLM-вердикт для доменов из базы")
+    an.add_argument("names", nargs="*", help="конкретные домены (по умолчанию — все подозрительные)")
+    an.add_argument("--force", action="store_true", help="анализировать заново, даже если страница не менялась")
 
     ls = sub.add_parser("list", help="показать угрозы")
     ls.add_argument("--risk", default="средний", choices=["низкий", "средний", "высокий"])
@@ -45,6 +52,10 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("rescore", help="пересчитать риск по сохранённым данным (без сети) — после правки весов")
 
+    rp = sub.add_parser("report", help="HTML-отчёт со скриншотами")
+    rp.add_argument("path", nargs="?", default="data/report.html")
+    rp.add_argument("--risk", default="средний", choices=["низкий", "средний", "высокий"])
+
     ex = sub.add_parser("export", help="выгрузить в CSV")
     ex.add_argument("path", nargs="?", default="-")
 
@@ -55,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "run":
         only = set(a.only or ["domains", "certs", "telegram"])
         stats = pipeline.run(cfg, do_domains="domains" in only, do_certs="certs" in only,
-                             do_telegram="telegram" in only, limit=a.limit)
+                             do_telegram="telegram" in only, limit=a.limit, do_analyze=not a.no_analyze)
         print(json.dumps(stats, ensure_ascii=False, indent=2))
         return 0
 
@@ -79,6 +90,14 @@ def main(argv: list[str] | None = None) -> int:
         ok = db.set_status(con, a.kind, a.name.lstrip("@").lower(), a.status, a.note)
         print("ок" if ok else "объект не найден")
         return 0 if ok else 1
+    elif a.cmd == "analyze":
+        stats = pipeline.deep_analyze(cfg, con, names=a.names or None, force=a.force)
+        print(json.dumps(stats, ensure_ascii=False))
+    elif a.cmd == "report":
+        from pathlib import Path
+        from . import report
+        n = report.build(con, Path(a.path), a.risk, cfg.brand["name"])
+        print(f"отчёт: {a.path} ({n} объектов)")
     elif a.cmd == "rescore":
         from . import scoring
         social = {x.lower() for x in cfg.brand.get("official_social", [])}

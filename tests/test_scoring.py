@@ -81,3 +81,16 @@ def test_foreign_bcc_news_low():
 def test_title_equals_domain_is_parked():
     s, lvl, why, _ = sd("bccbusiness.com", {"created": "2026-05-13", "http_status": 200, "title": "bccbusiness.com"})
     assert lvl == "высокий", why
+
+
+def test_godaddy_forsale_confirmed_by_screenshot_not_high():
+    s, lvl, why, _ = sd("centrcredit.com", {"created": "2025-11-28", "http_status": 403, "title": "",
+                                           "page_text": "Access Denied You don't have permission to access forsale.godaddy.com",
+                                           "shot_final_url": "https://centrcredit.com/"})
+    assert lvl != "высокий", why
+
+
+def test_redirect_to_foreign_brand_is_low():
+    s, lvl, why, _ = sd("bcc-online.net", {"http_status": 200, "title": "", "page_text": "Mondelez International",
+                                          "shot_final_url": "https://www.mondelezinternational.com/"})
+    assert lvl == "низкий", why

@@ -12,8 +12,46 @@ from .config import Config
 log = logging.getLogger(__name__)
 
 
+def deep_analyze(cfg: Config, con, names: list[str] | None = None, force: bool = False) -> dict[str, int]:
+    """Скриншот + LLM для подозрительных живых доменов. Повторно анализирует только изменившиеся страницы."""
+    from pathlib import Path
+    from . import analyze
+    acfg = cfg.analyze
+    rows = con.execute("SELECT * FROM assets WHERE kind='domain' AND status NOT IN ('defensive','false_positive','removed')"
+                       ).fetchall()
+    todo = []
+    for r in rows:
+        d = json.loads(r["data"])
+        if names is not None:
+            if r["name"] in names:
+                todo.append(r)
+            continue
+        if r["score"] < acfg.get("min_score", 3) or "http_status" not in d:
+            continue
+        if not force and d.get("analyzed_hash") == d.get("page_hash"):
+            continue  # страница не менялась с прошлого анализа
+        todo.append(r)
+    todo = todo[: acfg.get("max_per_run", 40)]
+    if not todo:
+        return {"analyzed": 0}
+    shots = Path(cfg.db_path).parent / "screenshots"
+    res = analyze.analyze_domains([r["name"] for r in todo], cfg, shots)
+    stats = {"analyzed": 0, "llm_errors": 0}
+    for r in todo:
+        a = res.get(r["name"], {})
+        d = json.loads(r["data"])
+        d.update(a)
+        d["analyzed_hash"] = d.get("page_hash")
+        sc, lvl, why, defensive = scoring.score_domain(r["name"], d, cfg.brand, cfg.scoring, cfg.official_domains)
+        db.upsert(con, "domain", r["name"], d, lvl, sc, why, defensive=defensive)
+        stats["analyzed"] += 1
+        stats["llm_errors"] += int("llm_error" in a)
+    con.commit()
+    return stats
+
+
 def run(cfg: Config, *, do_domains: bool = True, do_certs: bool = True, do_telegram: bool = True,
-        limit: int | None = None) -> dict:
+        limit: int | None = None, do_analyze: bool = True) -> dict:
     con = db.connect(cfg.db_path)
     started = db.now()
     run_id = con.execute("INSERT INTO runs(started) VALUES(?)", (started,)).lastrowid
@@ -50,11 +88,26 @@ def run(cfg: Config, *, do_domains: bool = True, do_certs: bool = True, do_teleg
         details = domains.enrich(found, cfg.brand, cfg.network)
         for name, d in details.items():
             d.update(cert_info.get(name, {}))
+        prev = con.execute("SELECT data FROM assets WHERE kind='domain' AND name=?", (name,)).fetchone()
+        if prev:  # сохраняем результаты прошлого анализа, пока страница не изменилась
+            old = json.loads(prev["data"])
+            for k, v in old.items():
+                if (k.startswith("llm_") or k in ("visual_similarity", "brand_color_share", "screenshot",
+                                                  "analyzed_at", "analyzed_hash")) and k not in d:
+                    d[k] = v
             sc, lvl, why, defensive = scoring.score_domain(name, d, cfg.brand, cfg.scoring, cfg.official_domains)
             count(db.upsert(con, "domain", name, d, lvl, sc, why, defensive=defensive))
         if do_domains and not limit:
             stats["gone_domains"] = db.mark_gone(con, "domain", set(details))
         con.commit()
+
+    # ---- глубокий анализ: скриншот + LLM ----
+    if do_analyze and (do_domains or do_certs):
+        try:
+            stats["deep"] = deep_analyze(cfg, con)
+        except Exception as e:  # noqa: BLE001  (нет браузера и т.п. — прогон не падает)
+            log.warning("глубокий анализ пропущен: %s", e)
+            stats["deep"] = {"error": str(e)[:200]}
 
     # ---- Telegram ----
     if do_telegram:

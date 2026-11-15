@@ -41,3 +41,26 @@ network:
   dns_timeout: 4
   http_timeout: 10
   nameservers: ["8.8.8.8", "1.1.1.1"]
+
+analyze:
+  # Какие домены анализировать скриншотом + LLM: только с баллом не ниже этого и с живым сайтом
+  min_score: 3
+  max_per_run: 40            # ограничение на один прогон (скорость и стоимость)
+  screenshot_timeout: 25     # секунд на загрузку страницы
+  # Путь к Chrome/Chromium. Пусто — Playwright использует свой (python -m playwright install chromium)
+  browser_path: ""
+
+llm:
+  # gemini | openai | anthropic | none
+  provider: gemini
+  # Имена моделей меняются — проверьте актуальное в документации провайдера
+  models:
+    gemini: gemini-2.5-flash
+    openai: gpt-4o-mini
+    anthropic: claude-haiku-5-5
+  # Ключ берётся из переменной окружения (не храните ключи в репозитории)
+  api_key_env:
+    gemini: GEMINI_API_KEY
+    openai: OPENAI_API_KEY
+    anthropic: ANTHROPIC_API_KEY
+  timeout: 60

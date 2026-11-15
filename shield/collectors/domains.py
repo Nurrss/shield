@@ -104,7 +104,8 @@ def http_probe(name: str, page_brand_re: re.Pattern, timeout: int) -> dict:
                 "http_status": r.status_code,
                 "final_url": r.url,
                 "title": re.sub(r"\s+", " ", t.group(1)).strip()[:150] if t else "",
-                "mentions_brand": bool(page_brand_re.search(html)),
+                # имя самого домена на странице («centercredit.ru is for sale») — не упоминание банка
+                "mentions_brand": bool(page_brand_re.search(html.lower().replace(name, "").replace(name.split(".")[0], ""))),
                 "has_password_form": bool(_FORM_PASS.search(html)),
                 "asks_card": bool(_CARD.search(html)) and "<form" in html.lower(),
                 "page_hash": hashlib.sha1(html.encode("utf-8", "ignore")).hexdigest()[:16],

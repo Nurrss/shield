@@ -8,8 +8,10 @@ from __future__ import annotations
 import re
 from datetime import date, datetime
 
-PARKED = ("parked", "for sale", "default page", "caddy works", "domain is for sale", "お名前.com",
-          "припаркован", "coming soon", "index of /", "welcome to nginx", "it works!")
+PARKED = ("parked", "for sale", "forsale", "default page", "caddy works", "domain is for sale", "お名前.com",
+          "припаркован", "coming soon", "launching soon", "index of /", "welcome to nginx", "it works!",
+          "продается", "продаётся", "приобрести этот домен", "buy this domain", "registration has expired",
+          "renew this domain", "сайт успешно размещен", "domain may be for sale", "hugedomains", "sedo")
 
 
 def _days_since(iso: str, today: date | None = None) -> int | None:
@@ -59,7 +61,12 @@ def score_domain(name: str, d: dict, brand: dict, cfg: dict, official: set[str],
     if cert_age is not None and cert_age <= 30:
         s += 2; why.append(f"свежий SSL-сертификат ({d['cert_first_seen']})")
 
-    if d.get("mentions_brand"):
+    mentions = bool(d.get("mentions_brand"))
+    if d.get("page_text") is not None:  # после скриншота: текст страницы без упоминаний самого адреса
+        txt = d["page_text"].lower().replace(name, "").replace(name.split(".")[0], "")
+        mentions = bool(re.search(brand["page_brand_regex"], txt, re.I))
+    d = {**d, "mentions_brand": mentions}
+    if mentions:
         s += 3; why.append("на странице упоминается банк")
         if d.get("has_password_form"):
             s += 2; why.append("форма ввода пароля")
@@ -67,12 +74,37 @@ def score_domain(name: str, d: dict, brand: dict, cfg: dict, official: set[str],
             s += 2; why.append("форма с данными карты")
 
     title = (d.get("title") or "").lower()
-    if any(p in title for p in PARKED) or title.strip() in (name, "www." + name):
-        why.append("припаркован / пустая заглушка — может «ожить» позже")
+    page = (d.get("page_text") or "").lower() + " " + (d.get("shot_final_url") or "").lower()
+    shot_host = (urlparse(d.get("shot_final_url", "")).hostname or "").lower().removeprefix("www.")
+    foreign_redirect = (shot_host and shot_host != name and not shot_host.endswith("." + name)
+                        and not re.search(brand["brand_regex"], shot_host, re.I)
+                        and not any(k in shot_host for k in ("godaddy", "sedo", "dan.com", "afternic", "namecheap")))
+    if any(p in title or p in page for p in PARKED) or title.strip() in (name, "www." + name):
+        why.append("припаркован / выставлен на продажу / заглушка — может «ожить» позже")
+        if d.get("page_text") is not None and not d.get("mentions_brand"):
+            # подтверждено скриншотом: сейчас там нет ничего от банка → «наблюдать», а не «срочно реагировать»
+            parked_cap = cfg["high"] - 1
+            s = min(s - 1, parked_cap)
+    elif foreign_redirect and not d.get("mentions_brand"):
+        s -= 3; why.append(f"перенаправляет на посторонний сайт ({shot_host})")
     elif "http_status" not in d:
         why.append("сайт не отвечает (возможен геофильтр — проверить из Казахстана)")
     elif title and not d.get("mentions_brand") and d.get("http_status", 0) < 400:
         s -= 2; why.append(f"на сайте посторонний контент («{d.get('title', '')[:50]}»)")
+
+    # --- результаты глубокого анализа (скриншот + LLM), если он был ---
+    sim = d.get("visual_similarity")
+    if sim is not None and sim >= 0.85:
+        s += 4; why.append(f"страница почти копирует официальный сайт (сходство {sim:.0%})")
+    v, conf = d.get("llm_verdict"), d.get("llm_confidence", 0)
+    if v == "impersonation" and conf >= 0.6:
+        s += 4; why.append(f"LLM: имитация банка ({conf:.0%}) — {d.get('llm_reason', '')}")
+    elif v == "impersonation" or v == "suspicious":
+        s += 2; why.append(f"LLM: подозрительно ({conf:.0%}) — {d.get('llm_reason', '')}")
+    elif v == "unrelated" and conf >= 0.6:
+        s -= 3; why.append(f"LLM: посторонний сайт — {d.get('llm_reason', '')}")
+    if d.get("llm_asks_credentials") and v in ("impersonation", "suspicious"):
+        s += 2; why.append("LLM: страница просит пароль / данные карты / коды")
 
     return s, level(s, cfg), why, False
 
@@ -111,6 +143,4 @@ def score_telegram(username: str, d: dict, cfg: dict, official_tg: set[str],
         s -= 3; why.append("название на другом языке — вероятно, посторонний бренд с аббревиатурой BCC")
     if official_instagram and username.lower() in official_instagram:
         s += 2; why.append("совпадает с официальным хэндлом банка в другой соцсети")
-    if re.search(r"\bdrops?\b|дроп", title, re.I):
-        s += 3; why.append("в имени упоминаются дропы")
     return s, level(s, cfg), why, False
