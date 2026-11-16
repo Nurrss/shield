@@ -13,14 +13,16 @@ from pathlib import Path
 COLORS = {"высокий": "#c62828", "средний": "#ef6c00", "низкий": "#607d8b"}
 
 
-def _img(path: str | None) -> str:
+def _img(path: str | None, base: Path = Path(".")) -> str:
+    if path and not Path(path).is_absolute():
+        path = str(base / path)
     if not path or not Path(path).exists():
         return '<div class="noshot">скриншота нет</div>'
     b64 = base64.b64encode(Path(path).read_bytes()).decode()
     return f'<img loading="lazy" src="data:image/png;base64,{b64}">'
 
 
-def build(con, out: Path, min_risk: str = "средний", brand_name: str = "") -> int:
+def build(con, out: Path, min_risk: str = "средний", brand_name: str = "", base: Path = Path("data")) -> int:
     order = {"низкий": 0, "средний": 1, "высокий": 2}
     rows = [r for r in con.execute(
         "SELECT * FROM assets WHERE status NOT IN ('defensive','false_positive','removed') ORDER BY score DESC")
@@ -36,7 +38,7 @@ def build(con, out: Path, min_risk: str = "средний", brand_name: str = ""
             if d.get("ips"): facts.append("IP: " + e(", ".join(d["ips"][:3])))
             if d.get("llm_verdict"): facts.append(f"LLM: {e(d['llm_verdict'])} ({d.get('llm_confidence', 0):.0%})")
             if d.get("visual_similarity") is not None: facts.append(f"сходство с сайтом банка: {d['visual_similarity']:.0%}")
-            shot = _img(d.get("screenshot"))
+            shot = _img(d.get("screenshot"), base)
         else:
             facts.append(f"тип: {e(d.get('tg_kind', ''))}")
             facts.append(f"название: {e(d.get('tg_title', ''))}")

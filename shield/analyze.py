@@ -93,7 +93,7 @@ def analyze_domains(names: list[str], cfg, out_dir: Path) -> dict[str, dict]:
                     continue
             path = out_dir / f"{name}_{today}.png"
             path.write_bytes(s["png"])
-            res["screenshot"] = str(path)
+            res["screenshot"] = f"screenshots/{path.name}"  # относительно папки с базой — переносимо
             res["page_text"] = " ".join(s["text"].split())[:1500]
             res["shot_final_url"] = s["final_url"]
             res["brand_color_share"] = brand_color_share(s["png"])

@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     elif a.cmd == "report":
         from pathlib import Path
         from . import report
-        n = report.build(con, Path(a.path), a.risk, cfg.brand["name"])
+        n = report.build(con, Path(a.path), a.risk, cfg.brand["name"], Path(cfg.db_path).parent)
         print(f"отчёт: {a.path} ({n} объектов)")
     elif a.cmd == "rescore":
         from . import scoring
