@@ -14,14 +14,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt && python -m playwright install --with-deps chromium
       - name: Restore DB
         uses: dawidd6/action-download-artifact@v6
         with: { name: shield-db, path: data, if_no_artifact_found: warn, workflow_conclusion: success }
       - run: python -m shield run
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - run: python -m shield events --days 1
-      - run: python -m shield export data/threats.csv
+      - run: python -m shield export data/threats.csv && python -m shield report data/report.html
       - uses: actions/upload-artifact@v4
         with: { name: shield-db, path: "data/shield.db", retention-days: 90 }
       - uses: actions/upload-artifact@v4
-        with: { name: threats-csv, path: "data/threats.csv" }
+        with: { name: threats-report, path: "data/threats.csv\ndata/report.html" }

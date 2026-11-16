@@ -11,12 +11,16 @@
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+python -m playwright install chromium    # браузер для скриншотов (один раз)
+export GEMINI_API_KEY=...                # ключ LLM (см. config.yaml → llm)
 python -m pytest -q                      # тесты оценки риска и базы
 python -m shield run --limit 500         # быстрый пробный прогон (~1 мин)
 python -m shield run                     # полный прогон (~15–25 мин: ~33 тыс. доменов)
 python -m shield list                    # угрозы среднего и высокого риска
 python -m shield events --days 1         # что нового за сутки
 python -m shield status domain bcc-kz.net reported --note "жалоба регистратору 16.11"
+python -m shield analyze --force         # скриншоты + LLM-вердикт для подозрительных доменов
+python -m shield report                  # HTML-отчёт со скриншотами → data/report.html
 python -m shield export threats.csv      # выгрузка для Excel
 ```
 
@@ -29,6 +33,9 @@ shield/
     domains.py         генерация кандидатов (dnstwist + связки) → DNS → RDAP (дата регистрации) → HTTP
     certs.py           логи SSL-сертификатов (crt.sh)
     telegram.py        публичные карточки t.me/<имя>
+  analyze.py           скриншот (Playwright) → сходство с официальным сайтом → LLM
+  llm.py               вердикт LLM: Gemini / OpenAI / Anthropic через HTTP, ключ из переменной окружения
+  report.py            HTML-отчёт со скриншотами
   scoring.py           оценка риска: сумма объяснимых признаков → низкий / средний / высокий
   db.py                SQLite: assets (объекты), observations (история), events (новое/изменилось/исчезло)
   pipeline.py          один прогон: собрать → оценить → сохранить
@@ -59,7 +66,7 @@ shield/
 - Список находок передаётся банку как «требует проверки»; публично аккаунты мошенническими не называем.
 
 ## Дальше по плану
-- [ ] Скриншоты страниц + визуальное сравнение с bcc.kz + LLM-вердикт
+- [x] Скриншоты страниц + визуальное сравнение с bcc.kz + LLM-вердикт
 - [ ] Алерты в Telegram-канал службы безопасности
 - [ ] Шаблоны жалоб на удаление (Telegram, регистратор, KZ-CERT) на RU / KZ / EN
 - [ ] Дашборд (Streamlit)
