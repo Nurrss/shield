@@ -88,13 +88,13 @@ def run(cfg: Config, *, do_domains: bool = True, do_certs: bool = True, do_teleg
         details = domains.enrich(found, cfg.brand, cfg.network)
         for name, d in details.items():
             d.update(cert_info.get(name, {}))
-        prev = con.execute("SELECT data FROM assets WHERE kind='domain' AND name=?", (name,)).fetchone()
-        if prev:  # сохраняем результаты прошлого анализа, пока страница не изменилась
-            old = json.loads(prev["data"])
-            for k, v in old.items():
-                if (k.startswith("llm_") or k in ("visual_similarity", "brand_color_share", "screenshot",
-                                                  "analyzed_at", "analyzed_hash")) and k not in d:
-                    d[k] = v
+            prev = con.execute("SELECT data FROM assets WHERE kind='domain' AND name=?", (name,)).fetchone()
+            if prev:  # сохраняем результаты прошлого анализа, пока страница не изменилась
+                old = json.loads(prev["data"])
+                for k, v in old.items():
+                    if (k.startswith("llm_") or k in ("visual_similarity", "brand_color_share", "screenshot",
+                                                      "analyzed_at", "analyzed_hash")) and k not in d:
+                        d[k] = v
             sc, lvl, why, defensive = scoring.score_domain(name, d, cfg.brand, cfg.scoring, cfg.official_domains)
             count(db.upsert(con, "domain", name, d, lvl, sc, why, defensive=defensive))
         if do_domains and not limit:
