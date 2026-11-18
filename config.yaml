@@ -64,3 +64,7 @@ llm:
     openai: OPENAI_API_KEY
     anthropic: ANTHROPIC_API_KEY
   timeout: 60
+
+takedown:
+  # Подпись в жалобах. Жалобу отправляет представитель банка или человек по его поручению.
+  sender: ""

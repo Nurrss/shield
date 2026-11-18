@@ -16,6 +16,7 @@ class Config:
     network: dict
     analyze: dict = field(default_factory=dict)
     llm: dict = field(default_factory=dict)
+    takedown: dict = field(default_factory=dict)
     db_path: Path = field(default_factory=lambda: Path(os.environ.get("SHIELD_DB", ROOT / "data" / "shield.db")))
 
     @property
@@ -31,4 +32,4 @@ def load(path: str | Path | None = None) -> Config:
     path = Path(path or os.environ.get("SHIELD_CONFIG", ROOT / "config.yaml"))
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     return Config(brand=raw["brand"], scoring=raw["scoring"], network=raw["network"],
-                  analyze=raw.get("analyze", {}), llm=raw.get("llm", {"provider": "none"}))
+                  analyze=raw.get("analyze", {}), llm=raw.get("llm", {"provider": "none"}), takedown=raw.get("takedown") or {})

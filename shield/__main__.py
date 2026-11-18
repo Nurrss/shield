@@ -8,6 +8,9 @@
   rescore   — пересчитать риск без сети
   status    — поменять статус объекта (reviewed / reported / removed / false_positive)
   export    — выгрузить базу в CSV
+  notify    — отправить новые события в Telegram-канал (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+  stats     — цифры для питча (воронка, риски, события за неделю)
+  takedown  — готовые жалобы на удаление (регистратор, хостинг, Telegram, KZ-CERT) на RU / KZ / EN
 """
 from __future__ import annotations
 
@@ -58,6 +61,22 @@ def main(argv: list[str] | None = None) -> int:
 
     ex = sub.add_parser("export", help="выгрузить в CSV")
     ex.add_argument("path", nargs="?", default="-")
+
+    nt = sub.add_parser("notify", help="алерты в Telegram: новые события → канал")
+    nt.add_argument("--min-risk", default="средний", choices=["низкий", "средний", "высокий"])
+    nt.add_argument("--max", type=int, default=20, help="максимум карточек за раз, остальное — одной сводкой")
+    nt.add_argument("--dry-run", action="store_true", help="только показать, ничего не отправлять и не помечать")
+
+    tk = sub.add_parser("takedown", help="жалоба на удаление объекта")
+    tk.add_argument("name", help="домен или @аккаунт")
+    tk.add_argument("--lang", default="ru", choices=["ru", "kz", "en"])
+    tk.add_argument("--to", action="append", choices=["registrar", "hosting", "telegram", "kzcert"],
+                    help="адресат (можно несколько раз); по умолчанию все подходящие")
+    tk.add_argument("--offline", action="store_true", help="не искать abuse-адреса в RDAP")
+
+    sx = sub.add_parser("stats", help="цифры для питча")
+    sx.add_argument("--days", type=int, default=7)
+    sx.add_argument("--json", action="store_true")
 
     a = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if a.verbose else logging.INFO, format="%(asctime)s %(message)s")
@@ -112,6 +131,33 @@ def main(argv: list[str] | None = None) -> int:
             n += 1
         con.commit()
         print(f"пересчитано: {n}")
+    elif a.cmd == "stats":
+        from . import stats
+        st = stats.collect(con, cfg.brand, a.days)
+        print(json.dumps(st, ensure_ascii=False, indent=2) if a.json else stats.render(st, a.days))
+    elif a.cmd == "notify":
+        from pathlib import Path
+        from . import notify
+        try:
+            stats = notify.run(con, Path(cfg.db_path).parent, a.min_risk, a.max, a.dry_run)
+        except notify.NotifyError as e:
+            print(f"ошибка: {e}", file=sys.stderr)
+            return 2
+        print(json.dumps(stats, ensure_ascii=False))
+        return 1 if stats["failed"] else 0
+    elif a.cmd == "takedown":
+        from . import takedown
+        name = a.name.lstrip("@").lower()
+        row = con.execute("SELECT * FROM assets WHERE name=?", (name,)).fetchone()
+        if row is None:
+            print("объект не найден в базе (python -m shield list)", file=sys.stderr)
+            return 1
+        contacts = {}
+        if row["kind"] == "domain" and not a.offline:
+            ips = json.loads(row["data"]).get("ips") or []
+            contacts = takedown.rdap_contacts(name, ips)
+        msgs = takedown.build(row, cfg.brand, a.lang, a.to, contacts, cfg.takedown.get("sender", ""))
+        print(takedown.render(msgs))
     elif a.cmd == "export":
         cols = ["kind", "name", "risk", "score", "status", "first_seen", "last_seen", "reasons", "data"]
         out = sys.stdout if a.path == "-" else open(a.path, "w", newline="", encoding="utf-8-sig")
