@@ -8,6 +8,9 @@ on:
 
 jobs:
   scan:
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -18,6 +21,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt && python -m playwright install --with-deps chromium
       - name: Restore DB
+        continue-on-error: true   # первый запуск: артефакта ещё нет
         uses: dawidd6/action-download-artifact@v6
         with: { name: shield-db, path: data, if_no_artifact_found: warn, workflow_conclusion: success }
       - run: python -m shield run
