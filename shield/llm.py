@@ -9,6 +9,7 @@ import base64
 import json
 import os
 import re
+import time
 
 import requests
 
@@ -106,6 +107,23 @@ def _anthropic(model: str, key: str, prompt: str, img: bytes, timeout: int) -> s
 CALLERS = {"gemini": _gemini, "openai": _openai, "anthropic": _anthropic}
 
 
+TRANSIENT = re.compile(r"\b(429|500|502|503|504)\b")
+
+
+def _call_with_retry(fn, model, key, prompt, img, timeout, retries, sleep=time.sleep):
+    """Повторяет вызов при временных сбоях провайдера (перегрузка 503, лимит 429, таймаут сети)."""
+    for attempt in range(retries):
+        try:
+            return fn(model, key, prompt, img, timeout)
+        except LLMError as e:
+            if not TRANSIENT.search(str(e)) or attempt == retries - 1:
+                raise
+        except requests.RequestException as e:
+            if attempt == retries - 1:
+                raise LLMError(f"сеть: {type(e).__name__}") from e
+        sleep(5 * 2 ** attempt)   # 5, 10, 20 секунд
+
+
 def verdict(cfg: dict, brand: dict, domain: str, screenshot: bytes, page_text: str) -> dict:
     provider = cfg.get("provider", "none")
     if provider == "none":
@@ -114,7 +132,8 @@ def verdict(cfg: dict, brand: dict, domain: str, screenshot: bytes, page_text: s
         raise LLMError(f"неизвестный провайдер {provider}")
     prompt = PROMPT.format(brand=brand["name"], official=", ".join(brand["official_domains"]),
                            domain=domain, text=page_text[:3000])
-    raw = CALLERS[provider](cfg["models"][provider], _key(cfg, provider), prompt, screenshot, cfg.get("timeout", 60))
+    raw = _call_with_retry(CALLERS[provider], cfg["models"][provider], _key(cfg, provider), prompt, screenshot,
+                           cfg.get("timeout", 60), cfg.get("retries", 4))
     out = parse(raw)
     out["llm_provider"] = f"{provider}:{cfg['models'][provider]}"
     return out

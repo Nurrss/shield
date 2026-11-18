@@ -23,13 +23,9 @@ STATUS_RU = {"new": "новая", "reviewed": "проверена", "reported": 
              "false_positive": "ложное срабатывание", "defensive": "защитная регистрация банка"}
 
 
-@st.cache_resource
-def get_con():
-    con = db.connect(cfg.db_path)
-    return con
-
-
-con = get_con()
+# Streamlit запускает скрипт в разных потоках при каждом действии, поэтому подключение к SQLite
+# открываем заново при каждом запуске (это дёшево), а не кэшируем.
+con = db.connect(cfg.db_path)
 
 
 def load_assets() -> pd.DataFrame:

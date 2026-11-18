@@ -124,7 +124,7 @@ def reasons_for(reasons: str, lang: str) -> list[str]:
 # Заполнители: {brand} {official} {subject_name} {ips} {created} {url} {reasons} {shot} {sender} {today}
 T = {
     "ru": {
-        "registrar": ("Жалоба: домен {name} используется для имитации бренда «{brand}»",
+        "registrar": ("Жалоба: домен {name} — возможная имитация бренда «{brand}»",
             "Здравствуйте!\n\nМы обращаемся от имени «{brand}» (официальные сайты: {official}). "
             "Домен ниже, по нашим данным, может использоваться для имитации банка и обмана его клиентов.\n\n"
             "Домен: {name}\nIP-адрес(а): {ips}\nДата регистрации: {created}\n\n"
@@ -133,13 +133,13 @@ T = {
             "если нарушение подтвердится, приостановить делегирование домена. Готовы предоставить "
             "дополнительные доказательства и подтверждение прав на бренд.\n\n"
             "С уважением,\n{sender}\n{today}"),
-        "hosting": ("Жалоба: на вашем IP {ips} размещён сайт {name}, имитирующий бренд «{brand}»",
+        "hosting": ("Жалоба: на вашем IP {ips} размещён сайт {name}, возможно имитирующий бренд «{brand}»",
             "Здравствуйте!\n\nНа IP-адресе из вашей сети ({ips}) работает сайт {name}, который, по нашим данным, "
             "может имитировать «{brand}» (официальные сайты: {official}) и вводить клиентов в заблуждение.\n\n"
             "Выявленные признаки:\n{reasons}\n\n{shot}"
             "Просим проверить ресурс по правилам допустимого использования и, при подтверждении, "
             "ограничить доступ к нему.\n\nС уважением,\n{sender}\n{today}"),
-        "telegram": ("Impersonation report: {name} / Жалоба на аккаунт, выдающий себя за «{brand}»",
+        "telegram": ("Impersonation report: {name} / Жалоба на аккаунт, возможно выдающий себя за «{brand}»",
             "Здравствуйте!\n\nАккаунт {name} ({url}) использует название банка «{brand}» "
             "(официальные ресурсы: {official}) и, по нашим данным, может вводить клиентов в заблуждение.\n\n"
             "Выявленные признаки:\n{reasons}\n\n{shot}"
@@ -154,7 +154,7 @@ T = {
             "регистратору и хостинг-провайдеру.\n\nС уважением,\n{sender}\n{today}"),
     },
     "kz": {
-        "registrar": ("Шағым: {name} домені «{brand}» брендін имитациялау үшін қолданылуда",
+        "registrar": ("Шағым: {name} домені «{brand}» брендін имитациялауы мүмкін",
             "Сәлеметсіз бе!\n\n«{brand}» АҚ атынан (ресми сайттары: {official}) хабарласып отырмыз. "
             "Төмендегі домен банкті имитациялап, оның клиенттерін алдау үшін қолданылуы мүмкін деп санаймыз.\n\n"
             "Домен: {name}\nIP-мекенжай(лар): {ips}\nТіркелген күні: {created}\n\n"
@@ -162,13 +162,13 @@ T = {
             "Доменді сіздің abuse-саясатыңызға сәйкес тексеруді және бұзушылық расталған жағдайда "
             "доменнің жұмысын тоқтата тұруды сұраймыз. Қосымша дәлелдер мен бренд құқықтарын растайтын "
             "құжаттарды ұсынуға дайынбыз.\n\nҚұрметпен,\n{sender}\n{today}"),
-        "hosting": ("Шағым: {ips} IP-мекенжайындағы {name} сайты «{brand}» брендін имитациялайды",
+        "hosting": ("Шағым: {ips} IP-мекенжайындағы {name} сайты «{brand}» брендін имитациялауы мүмкін",
             "Сәлеметсіз бе!\n\nСіздің желіңіздегі IP-мекенжайда ({ips}) {name} сайты жұмыс істейді. "
             "Біздің деректеріміз бойынша, ол «{brand}» (ресми сайттары: {official}) брендін имитациялап, "
             "клиенттерді адастыруы мүмкін.\n\nАнықталған белгілер:\n{reasons}\n\n{shot}"
             "Ресурсты пайдалану ережелері бойынша тексеруді және расталған жағдайда қолжетімділікті "
             "шектеуді сұраймыз.\n\nҚұрметпен,\n{sender}\n{today}"),
-        "telegram": ("Impersonation report: {name} / «{brand}» атын жамылған аккаунтқа шағым",
+        "telegram": ("Impersonation report: {name} / «{brand}» атын жамылуы мүмкін аккаунтқа шағым",
             "Сәлеметсіз бе!\n\n{name} аккаунты ({url}) «{brand}» банкінің атын пайдаланады "
             "(ресми ресурстары: {official}) және клиенттерді адастыруы мүмкін.\n\n"
             "Анықталған белгілер:\n{reasons}\n\n{shot}"
@@ -183,7 +183,7 @@ T = {
             "хостинг-провайдерге жолдауды сұраймыз.\n\nҚұрметпен,\n{sender}\n{today}"),
     },
     "en": {
-        "registrar": ("Abuse report: domain {name} impersonates the brand «{brand}»",
+        "registrar": ("Abuse report: domain {name} may impersonate the brand «{brand}»",
             "Hello,\n\nWe are writing on behalf of «{brand}» (official websites: {official}). "
             "The domain below may be used to impersonate the bank and mislead its customers.\n\n"
             "Domain: {name}\nIP address(es): {ips}\nRegistration date: {created}\n\n"
@@ -191,13 +191,13 @@ T = {
             "Please review the domain under your abuse policy and, if the violation is confirmed, "
             "suspend it. We can provide further evidence and proof of our rights to the brand.\n\n"
             "Regards,\n{sender}\n{today}"),
-        "hosting": ("Abuse report: site {name} on your IP {ips} impersonates «{brand}»",
+        "hosting": ("Abuse report: site {name} on your IP {ips} may impersonate «{brand}»",
             "Hello,\n\nThe website {name} hosted on an IP address in your network ({ips}) may impersonate "
             "«{brand}» (official websites: {official}) and mislead customers.\n\n"
             "Indicators:\n{reasons}\n\n{shot}"
             "Please review it under your acceptable use policy and, if confirmed, restrict access.\n\n"
             "Regards,\n{sender}\n{today}"),
-        "telegram": ("Impersonation report: {name} impersonates «{brand}»",
+        "telegram": ("Impersonation report: {name} may impersonate «{brand}»",
             "Hello,\n\nThe account {name} ({url}) uses the name of the bank «{brand}» "
             "(official resources: {official}) and may mislead its customers.\n\n"
             "Indicators:\n{reasons}\n\n{shot}"

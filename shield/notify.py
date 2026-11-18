@@ -10,6 +10,7 @@ import html
 import json
 import logging
 import os
+import time
 from pathlib import Path
 
 import requests
@@ -27,6 +28,7 @@ EVENT_TITLE = {
 API = "https://api.telegram.org/bot{token}/{method}"
 CAPTION_LIMIT = 1024   # лимит Telegram на подпись к фото
 TEXT_LIMIT = 4096
+PAUSE = 3.0           # секунд между сообщениями: Telegram ограничивает частоту отправки в канал
 
 
 class NotifyError(RuntimeError):
@@ -97,12 +99,19 @@ def screenshot_path(r, base: Path) -> Path | None:
     return p if p.exists() else None
 
 
-def _call(token: str, method: str, **kw) -> dict:
+def _call(token: str, method: str, _retry: bool = True, **kw) -> dict:
     r = requests.post(API.format(token=token, method=method), timeout=30, **kw)
     try:
         j = r.json()
     except ValueError:
         j = {}
+    if r.status_code == 429 and _retry:  # слишком часто: ждём сколько просит Telegram и повторяем один раз
+        wait = min(int((j.get("parameters") or {}).get("retry_after", 30)) + 1, 90)
+        log.info("Telegram просит подождать %d с", wait)
+        time.sleep(wait)
+        for k, v in kw.get("files", {}).items():
+            v.seek(0)
+        return _call(token, method, _retry=False, **kw)
     if r.status_code != 200 or not j.get("ok"):
         # токен в сообщение об ошибке не попадает
         raise NotifyError(f"Telegram {method}: {r.status_code} {j.get('description', r.text[:120])}")
@@ -146,6 +155,7 @@ def run(con, base: Path, min_risk: str = "средний", max_cards: int = 20, 
             con.execute("UPDATE events SET notified=1 WHERE id=?", (r["event_id"],))
             con.commit()
             stats["sent"] += 1
+            time.sleep(PAUSE)
         except (NotifyError, requests.RequestException, OSError) as e:
             log.warning("не отправлено %s: %s", r["name"], e)
             stats["failed"] += 1

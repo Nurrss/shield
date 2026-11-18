@@ -1,6 +1,6 @@
 # Настройки бренда, который защищаем. Чтобы мониторить другой банк — поменяйте этот файл.
 brand:
-  name: "Банк ЦентрКредит"
+  name: 'Банк ЦентрКредит'
   # Официальные домены: всё, что на них ведёт (редирект), считается защитной регистрацией банка
   official_domains: [bcc.kz, centercredit.kz]
   # Официальные Telegram-аккаунты (без @, регистр не важен)
@@ -10,52 +10,166 @@ brand:
   # Домены, от которых генерируются опечатки (dnstwist)
   seed_domains: [bcc.kz, centercredit.kz, bankcentercredit.kz]
   # Корни имён для связок "корень + суффикс + зона"
-  name_roots: [bcc, bcckz, bcc-kz, centercredit, center-credit, centrcredit, bankcentercredit,
-               bcc-bank, bccbank, bcconline, bcc-online, mybcc, mybcc-kz, bccbusiness, bcc-business]
-  name_suffixes: ["", -online, -login, -support, -kz, -pay, -bonus, -gift, -cashback, -verify,
-                  -secure, -auth, "24", -24, -app, -help]
-  tlds: [kz, com, net, org, online, site, info, pro, top, xyz, app, shop, store, click, link, live,
-         me, cc, icu, sbs, life, vip, fun, website, space, tech, su, ru]
+  name_roots:
+    [
+      bcc,
+      bcckz,
+      bcc-kz,
+      centercredit,
+      center-credit,
+      centrcredit,
+      bankcentercredit,
+      bcc-bank,
+      bccbank,
+      bcconline,
+      bcc-online,
+      mybcc,
+      mybcc-kz,
+      bccbusiness,
+      bcc-business,
+    ]
+  name_suffixes:
+    [
+      '',
+      -online,
+      -login,
+      -support,
+      -kz,
+      -pay,
+      -bonus,
+      -gift,
+      -cashback,
+      -verify,
+      -secure,
+      -auth,
+      '24',
+      -24,
+      -app,
+      -help,
+    ]
+  tlds:
+    [
+      kz,
+      com,
+      net,
+      org,
+      online,
+      site,
+      info,
+      pro,
+      top,
+      xyz,
+      app,
+      shop,
+      store,
+      click,
+      link,
+      live,
+      me,
+      cc,
+      icu,
+      sbs,
+      life,
+      vip,
+      fun,
+      website,
+      space,
+      tech,
+      su,
+      ru,
+    ]
   # Регулярное выражение: признаки бренда в имени домена / аккаунта / в тексте страницы
   brand_regex: "centercredit|centrcredit|center-credit|центр\\s*кредит|bcc"
   page_brand_regex: "centercredit|центркредит|центр кредит|bcc\\.kz"
   # Корни для поиска Telegram-двойников
-  telegram_roots: [bcc, bcckz, bcc_kz, bank_bcc, bccbank, bcc_bank, centercredit, center_credit,
-                   bankcentercredit, bank_centercredit, centercredit_kz, bcc_bank_kz]
-  telegram_suffixes: ["", _official, _support, support, _help, help, _bot, bot, _support_bot, supportbot,
-                      _online, online, _business, business, _bonus, _kz, kz, _sb, _security, _service,
-                      _info, _news, _chat, "_24", "24", _pay, _app, _cashback]
+  telegram_roots:
+    [
+      bcc,
+      bcckz,
+      bcc_kz,
+      bank_bcc,
+      bccbank,
+      bcc_bank,
+      centercredit,
+      center_credit,
+      bankcentercredit,
+      bank_centercredit,
+      centercredit_kz,
+      bcc_bank_kz,
+    ]
+  telegram_suffixes:
+    [
+      '',
+      _official,
+      _support,
+      support,
+      _help,
+      help,
+      _bot,
+      bot,
+      _support_bot,
+      supportbot,
+      _online,
+      online,
+      _business,
+      business,
+      _bonus,
+      _kz,
+      kz,
+      _sb,
+      _security,
+      _service,
+      _info,
+      _news,
+      _chat,
+      '_24',
+      '24',
+      _pay,
+      _app,
+      _cashback,
+    ]
   # Паттерны для поиска в логах SSL-сертификатов (crt.sh)
-  cert_patterns: ["%centercredit%", "%centrcredit%", "%bcc-kz%", "%bcckz%", "%bccbank%", "%bcc-bank%",
-                  "%bcc-online%", "%bcconline%", "%mybcc%", "%bcc-pay%"]
+  cert_patterns:
+    [
+      '%centercredit%',
+      '%centrcredit%',
+      '%bcc-kz%',
+      '%bcckz%',
+      '%bccbank%',
+      '%bcc-bank%',
+      '%bcc-online%',
+      '%bcconline%',
+      '%mybcc%',
+      '%bcc-pay%',
+    ]
 
 scoring:
   # Порог дней: регистрация моложе этого считается «свежей»
   fresh_days: 365
-  high: 5      # балл >= high  -> высокий риск
-  medium: 3    # балл >= medium -> средний риск
+  high: 5 # балл >= high  -> высокий риск
+  medium: 3 # балл >= medium -> средний риск
 
 network:
   dns_workers: 60
   http_workers: 16
   dns_timeout: 4
   http_timeout: 10
-  nameservers: ["8.8.8.8", "1.1.1.1"]
+  nameservers: ['8.8.8.8', '1.1.1.1']
 
 analyze:
   # Какие домены анализировать скриншотом + LLM: только с баллом не ниже этого и с живым сайтом
   min_score: 3
-  max_per_run: 40            # ограничение на один прогон (скорость и стоимость)
-  screenshot_timeout: 25     # секунд на загрузку страницы
+  max_per_run: 40 # ограничение на один прогон (скорость и стоимость)
+  screenshot_timeout: 25 # секунд на загрузку страницы
   # Путь к Chrome/Chromium. Пусто — Playwright использует свой (python -m playwright install chromium)
-  browser_path: ""
+  browser_path: ''
 
 llm:
   # gemini | openai | anthropic | none
   provider: gemini
   # Имена моделей меняются — проверьте актуальное в документации провайдера
   models:
-    gemini: gemini-2.5-flash
+    gemini: gemini-3.8-flash
     openai: gpt-4o-mini
     anthropic: claude-haiku-5-5
   # Ключ берётся из переменной окружения (не храните ключи в репозитории)
@@ -67,4 +181,4 @@ llm:
 
 takedown:
   # Подпись в жалобах. Жалобу отправляет представитель банка или человек по его поручению.
-  sender: ""
+  sender: 'Служба информационной безопасности, Банк ЦентрКредит'
