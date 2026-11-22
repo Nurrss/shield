@@ -53,6 +53,10 @@ def pending(con, min_risk: str = "средний") -> tuple[list, list]:
     send, skip = [], []
     for r in rows:
         ok = RISK_ORDER.get(r["risk"], 0) >= RISK_ORDER[min_risk] and r["status"] != "defensive"
+        if r["status"] in ("false_positive", "removed"):
+            ok = False
+        elif r["status"] in ("reviewed", "reported") and r["type"] != "changed":
+            ok = False  # человек уже проверил: напоминаем, только если страница изменилась
         (send if ok else skip).append(r)
     return send, skip
 
