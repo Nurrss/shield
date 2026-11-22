@@ -31,22 +31,32 @@ def deep_analyze(cfg: Config, con, names: list[str] | None = None, force: bool =
         if not force and d.get("analyzed_hash") == d.get("page_hash") and "page_text" in d:
             continue  # страница не менялась с прошлого анализа
         todo.append(r)
+    todo.sort(key=lambda r: -r["score"])  # самые опасные — первыми
     todo = todo[: acfg.get("max_per_run", 40)]
     if not todo:
         return {"analyzed": 0}
     shots = Path(cfg.db_path).parent / "screenshots"
-    res = analyze.analyze_domains([r["name"] for r in todo], cfg, shots)
-    stats = {"analyzed": 0, "llm_errors": 0}
-    for r in todo:
-        a = res.get(r["name"], {})
-        d = json.loads(r["data"])
-        d.update(a)
-        d["analyzed_hash"] = d.get("page_hash")
-        sc, lvl, why, defensive = scoring.score_domain(r["name"], d, cfg.brand, cfg.scoring, cfg.official_domains)
-        db.upsert(con, "domain", r["name"], d, lvl, sc, why, defensive=defensive)
-        stats["analyzed"] += 1
-        stats["llm_errors"] += int("llm_error" in a)
-    con.commit()
+    budget = acfg.get("budget_s", 900)  # общий лимит: перегруженный LLM не должен съесть весь прогон
+    started = time.time()
+    stats = {"analyzed": 0, "llm_errors": 0, "postponed": 0}
+    for i in range(0, len(todo), 5):  # пачками по 5, с сохранением после каждой
+        if time.time() - started > budget:
+            stats["postponed"] = len(todo) - i
+            log.warning("анализ: лимит %d с исчерпан, %d доменов — в следующий прогон", budget, len(todo) - i)
+            break
+        batch = todo[i:i + 5]
+        res = analyze.analyze_domains([r["name"] for r in batch], cfg, shots)
+        for r in batch:
+            a = res.get(r["name"], {})
+            d = json.loads(r["data"])
+            d.update(a)
+            if "llm_error" not in a and "analyze_error" not in a:
+                d["analyzed_hash"] = d.get("page_hash")  # при ошибке повторим анализ в следующий раз
+            sc, lvl, why, defensive = scoring.score_domain(r["name"], d, cfg.brand, cfg.scoring, cfg.official_domains)
+            db.upsert(con, "domain", r["name"], d, lvl, sc, why, defensive=defensive)
+            stats["analyzed"] += 1
+            stats["llm_errors"] += int("llm_error" in a)
+        con.commit()
     return stats
 
 
