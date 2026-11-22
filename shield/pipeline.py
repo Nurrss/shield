@@ -73,7 +73,9 @@ def run(cfg: Config, *, do_domains: bool = True, do_certs: bool = True, do_teleg
                 cands = set(sorted(cands)[:limit])
             stats["candidates"] = len(cands)
             log.info("Кандидатов: %d, проверяю DNS…", len(cands))
-            found = domains.resolve_all(cands, cfg.network)
+            known = {x[0] for x in con.execute("SELECT name FROM assets WHERE kind='domain'")}
+            found = domains.resolve_all(cands, cfg.network, priority=known)
+            stats["dns_complete"] = getattr(domains.resolve_all, "complete", True)
             stats["dns_live"] = len(found)
             stats["dns_seconds"] = round(time.time() - t)
         cert_info: dict[str, dict] = {}
@@ -97,7 +99,7 @@ def run(cfg: Config, *, do_domains: bool = True, do_certs: bool = True, do_teleg
                         d[k] = v
             sc, lvl, why, defensive = scoring.score_domain(name, d, cfg.brand, cfg.scoring, cfg.official_domains)
             count(db.upsert(con, "domain", name, d, lvl, sc, why, defensive=defensive))
-        if do_domains and not limit:
+        if do_domains and not limit and stats.get("dns_complete", True):  # неполный DNS-прогон не «теряет» домены
             stats["gone_domains"] = db.mark_gone(con, "domain", set(details))
         con.commit()
 
