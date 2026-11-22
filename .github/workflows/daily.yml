@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 60
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      PYTHONUNBUFFERED: "1"   # логи сразу видны в Actions
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,6 +26,8 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with: { name: shield-db, path: data, if_no_artifact_found: warn, workflow_conclusion: success }
       - run: python -m shield run
+        timeout-minutes: 40       # зависший внешний сервис не съест весь час
+        continue-on-error: true   # даже при сбое сохраняем то, что успели собрать
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - run: python -m shield events --days 1
