@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import concurrent.futures as cf
 import hashlib
+import html as _html
 import logging
 import re
+import time
 from urllib.parse import urlparse
 
 import dns.exception
@@ -93,17 +95,28 @@ _FORM_PASS = re.compile(r"type=[\"']?password", re.I)
 _CARD = re.compile(r"(card|карт|cvv|cvc|номер карты|pan)", re.I)
 
 
+def _get_limited(url: str, timeout: int, max_bytes: int = 400_000):
+    """GET с общим лимитом времени и размера: сайт, который отдаёт страницу бесконечно, не подвесит прогон."""
+    deadline = time.time() + timeout * 2
+    with requests.get(url, timeout=timeout, headers=UA, allow_redirects=True, stream=True) as r:
+        buf = b""
+        for chunk in r.iter_content(16384):
+            buf += chunk
+            if len(buf) >= max_bytes or time.time() > deadline:
+                break
+        return r, buf.decode(r.encoding or "utf-8", "ignore")
+
+
 def http_probe(name: str, page_brand_re: re.Pattern, timeout: int) -> dict:
     out: dict = {}
     for scheme in ("https://", "http://"):
         try:
-            r = requests.get(scheme + name, timeout=timeout, headers=UA, allow_redirects=True)
-            html = r.text[:400_000]
+            r, html = _get_limited(scheme + name, timeout)
             t = _TITLE.search(html)
             out = {
                 "http_status": r.status_code,
                 "final_url": r.url,
-                "title": re.sub(r"\s+", " ", t.group(1)).strip()[:150] if t else "",
+                "title": _html.unescape(re.sub(r"\s+", " ", t.group(1))).strip()[:150] if t else "",
                 # имя самого домена на странице («centercredit.ru is for sale») — не упоминание банка
                 "mentions_brand": bool(page_brand_re.search(html.lower().replace(name, "").replace(name.split(".")[0], ""))),
                 "has_password_form": bool(_FORM_PASS.search(html)),
