@@ -5,6 +5,7 @@ import concurrent.futures as cf
 import hashlib
 import html as _html
 import logging
+import random
 import re
 import time
 from urllib.parse import urlparse
@@ -65,18 +66,46 @@ def resolve_one(name: str, r: dns.resolver.Resolver) -> dict | None:
     return None
 
 
-def resolve_all(names: set[str], net: dict) -> dict[str, dict]:
+def resolve_all(names: set[str], net: dict, priority: set[str] | None = None) -> dict[str, dict]:
+    """Проверяет имена в DNS с общим лимитом времени (net.dns_budget_s, по умолчанию 20 минут).
+
+    Сначала — уже известные домены (чтобы история не прерывалась), остальные в случайном порядке:
+    если DNS медленный и лимит кончился, следующий прогон проверит другую часть.
+    resolve_all.complete = False, если проверены не все имена.
+    """
     r = _resolver(net)
+    budget = net.get("dns_budget_s", 1200)
+    prio = priority or set()
+    first = sorted(n for n in names if n in prio)
+    rest = [n for n in names if n not in prio]
+    random.shuffle(rest)
+    ordered = first + rest
     found: dict[str, dict] = {}
-    with cf.ThreadPoolExecutor(net["dns_workers"]) as ex:
-        for name, res in zip(names, ex.map(lambda n: resolve_one(n, r), names)):
-            if res is not None:
-                found[name] = res
-    # таймауты без ответа не считаем находкой, но и не теряем — пусть попадут в лог
-    timeouts = [n for n, v in found.items() if v.get("dns_error")]
+    done = timeouts = 0
+    resolve_all.complete = True
+    ex = cf.ThreadPoolExecutor(net["dns_workers"])
+    futs = {ex.submit(resolve_one, n, r): n for n in ordered}
+    try:
+        for f in cf.as_completed(futs, timeout=budget):
+            done += 1
+            res = f.result()
+            if done % 5000 == 0:
+                log.info("DNS: проверено %d из %d, живых %d", done, len(ordered), len(found))
+            if res is None:
+                continue
+            if res.get("dns_error"):
+                timeouts += 1
+                continue
+            found[futs[f]] = res
+    except cf.TimeoutError:
+        resolve_all.complete = False
+        log.warning("DNS: лимит %d с исчерпан, проверено %d из %d — остальные в следующий прогон",
+                    budget, done, len(ordered))
+    finally:
+        ex.shutdown(wait=False, cancel_futures=True)
     if timeouts:
-        log.info("DNS: %d имён ответили таймаутом и пропущены в этом прогоне", len(timeouts))
-    return {n: v for n, v in found.items() if not v.get("dns_error")}
+        log.info("DNS: %d имён ответили таймаутом и пропущены в этом прогоне", timeouts)
+    return found
 
 
 # ---------- 3. RDAP: дата регистрации ----------
