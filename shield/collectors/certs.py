@@ -5,6 +5,7 @@ crt.sh бывает нестабилен — ошибки не роняют пр
 """
 from __future__ import annotations
 
+import json
 import logging
 import time
 
@@ -18,11 +19,17 @@ def search(patterns: list[str], official: set[str], timeout: int = 60) -> tuple[
     failed: list[str] = []
     for p in patterns:
         ok = False
-        for attempt in range(3):
+        for attempt in range(2):
             try:
-                r = requests.get("https://crt.sh/", params={"q": p, "output": "json", "exclude": "expired"},
-                                 timeout=timeout)
-                rows = r.json()
+                # stream + общий лимит: crt.sh иногда отдаёт ответ по капле и может подвесить прогон
+                with requests.get("https://crt.sh/", params={"q": p, "output": "json", "exclude": "expired"},
+                                  timeout=(10, 30), stream=True) as r:
+                    buf, t0 = b"", time.time()
+                    for chunk in r.iter_content(65536):
+                        buf += chunk
+                        if time.time() - t0 > timeout:
+                            raise TimeoutError("crt.sh отвечает слишком долго")
+                rows = json.loads(buf or b"[]")
                 ok = True
                 break
             except Exception as e:  # noqa: BLE001
