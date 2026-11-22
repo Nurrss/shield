@@ -28,7 +28,7 @@ def deep_analyze(cfg: Config, con, names: list[str] | None = None, force: bool =
             continue
         if r["score"] < acfg.get("min_score", 3) or "http_status" not in d:
             continue
-        if not force and d.get("analyzed_hash") == d.get("page_hash"):
+        if not force and d.get("analyzed_hash") == d.get("page_hash") and "page_text" in d:
             continue  # страница не менялась с прошлого анализа
         todo.append(r)
     todo = todo[: acfg.get("max_per_run", 40)]
