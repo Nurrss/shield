@@ -22,7 +22,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt && python -m playwright install --with-deps chromium
       - name: Tests
-        run: pytest -q
+        run: python -m pytest -q
       - name: Restore DB
         continue-on-error: true   # первый запуск: артефакта ещё нет
         uses: dawidd6/action-download-artifact@v6
