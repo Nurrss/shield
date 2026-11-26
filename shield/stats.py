@@ -1,4 +1,4 @@
-"""Цифры для питча одним запросом к базе: python -m shield stats  (шаг 5.2 плана)."""
+"""Цифры для питча одним запросом к базе: python -m shield stats."""
 from __future__ import annotations
 
 import json
