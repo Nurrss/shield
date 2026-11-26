@@ -107,6 +107,8 @@ def run(cfg: Config, *, do_domains: bool = True, do_certs: bool = True, do_teleg
                     if (k.startswith("llm_") or k in ("visual_similarity", "brand_color_share", "screenshot", "page_text",
                                                       "shot_final_url", "analyzed_at", "analyzed_hash")) and k not in d:
                         d[k] = v
+                if not d.get("created") and old.get("created"):  # RDAP не ответил — дата регистрации не меняется
+                    d["created"] = old["created"]
             sc, lvl, why, defensive = scoring.score_domain(name, d, cfg.brand, cfg.scoring, cfg.official_domains)
             count(db.upsert(con, "domain", name, d, lvl, sc, why, defensive=defensive))
         if do_domains and not limit and stats.get("dns_complete", True):  # неполный DNS-прогон не «теряет» домены

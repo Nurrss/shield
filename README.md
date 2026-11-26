@@ -1,5 +1,18 @@
 # 🛡️ BCC Shield — мониторинг фейков бренда банка вне его периметра
 
+[![daily-scan](https://github.com/Nurrss/shield/actions/workflows/daily.yml/badge.svg)](https://github.com/Nurrss/shield/actions/workflows/daily.yml)
+
+> **Одной фразой:** каждое утро система сама находит двойников Банка ЦентрКредит — похожие домены и Telegram-аккаунты,
+> объясняет, чем каждый опасен, присылает в Telegram только новое и готовит жалобу на удаление.
+
+**Посмотреть за 1 минуту** (вымышленная демо-база, интернет и ключи не нужны):
+
+```bash
+pip install -r requirements.txt
+python scripts/make_demo_db.py
+SHIELD_DB=data/demo.db streamlit run dashboard.py
+```
+
 Проект для ITU Hackathon-2026, кейс «Инновации в банкинге и кибербезопасность» (Банк ЦентрКредит).
 
 **Проблема.** Банк видит мошенничество, только когда клиент уже отдал деньги. А подготовка идёт снаружи:
